@@ -39,7 +39,7 @@ anyhow    = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 indicatif = "0.17"
-rand = "0.8"
+rand = { version = "0.8", features = ["small_rng"] }
 tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
