@@ -64,3 +64,75 @@ impl ModelVariant {
         }
     }
 }
+
+pub struct DebateLMModel {
+    pub variant: ModelVariant,
+    pub device: Device,
+    pub dtype: DType,
+    pub vocab_size: usize,
+    pub max_seq_line: usize,
+}
+
+impl DebateLMModel {
+    pub fn load(
+        weight_paths: &[std::path::PathBuf],
+        config: &ModelConfig,
+        device: &Device,
+        dtype: DType,
+    ) -> Result<Self> {
+        tracing::info!(
+            num_shards  = weight_paths.len(),
+            dtype       = ?dtype,
+            model_type  = ?config.model_type,
+            "loading model weights via mmap"
+        );
+
+        let vb = unsafe {
+            VarBuilder::from_mmaped_safetensors(weight_paths, dtype, device)
+                .map_err(|e| DebateLMError::WeightsMmap {
+                    message: e.to_string(),
+                })?
+        };
+
+        let variant = match &config.model_type {
+            ModelType::Mistral => {
+
+            }
+
+            ModelType::Phi3 => {
+
+            }
+        };
+
+        Ok(Self {
+            variant,
+            device: device.clone(),
+            dtype,
+            vocab_size: config.vocab_size,
+            max_seq_line: config.max_position_embeddings,
+        });
+    }
+
+    #[inline]
+    pub fn forward(&mut self, input_ids: &Tensor, seqlen_offset: usize) -> Result<Tensor> {
+        self.variant
+            .forward(input_ids, seqlen_offset)
+            .map_err(|e| DebateLMError::ForwardPassFailed {
+                step: seqlen_offset,
+                message: e.to_string(),
+            })
+    }
+
+    #[inline]
+    pub fn clear_kv_cache(&mut self) {
+        self.variant.clear_kv_cache();
+    }
+}
+
+pub fn auto_dtype(device: &Device) -> DType {
+    match device {
+        Device::Cuda(_) => DType::BF16,
+        Device::Metal(_) => DType::F32,
+        Device::Cpu => DType::F32,
+    }
+}
